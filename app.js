@@ -54,7 +54,7 @@ function doesLastTweetEqualThisAttempt (tweetAttempt) {
 function konamiRequest() {
 
     // get the current date - ignoring time
-    var tempDate = Date.now();
+    var tempDate = new Date();
     var currentDate = new Date (tempDate.getUTCFullYear(), tempDate.getUTCMonth(), tempDate.getUTCDate());
     var effectiveDate;
 
