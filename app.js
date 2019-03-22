@@ -26,7 +26,7 @@ var optionsA = {
 }
 
 var optionsB = {
-    url: 'http://www.yugioh-card.com/oc/limited',
+    url: 'http://www.yugioh-card.com/uk/limited',
     method: 'GET',
     headers: headers
 }
@@ -43,19 +43,24 @@ var server = app.listen(PORT, function () {
 })
 
 var banlistHtml = '';
+var banlistHtml2 = '';
 
 function doesLastTweetEqualThisAttempt (tweetAttempt) {
-    T.get('statuses/user_timeline', {screen_name: ygobanlistbot}, {count: 1}, function (err, data, response) {
-      var parsedResponse = JSON.parse(data);
-      return equals(parsedResponse["text"], tweetAttempt);
+    T.get('statuses/user_timeline', {screen_name: 'ygobanlistbot', count: 1}, function (err, tweets, response) {
+      if(err){
+          console.log(err[0].message)
+      }
+      else {
+          console.log("I'm checking to see if the last tweet equals this attempt.");
+          return tweets[0].text === tweetAttempt;
+      }
     })
 }
 
 function konamiRequest() {
 
     // get the current date - ignoring time
-    var tempDate = new Date();
-    var currentDate = new Date (tempDate.getUTCFullYear(), tempDate.getUTCMonth(), tempDate.getUTCDate());
+    var currentDate = moment().startOf('day');
     var effectiveDate;
 
     request(optionsA, function (error, response, body) {
@@ -64,15 +69,16 @@ function konamiRequest() {
         }
     });
 
-    var effectiveFrom = banlistHtml.match('Effective from ([A-Za-z]{2,10}) ([0-9]{2}), ([0-9]{4})');
+    var effectiveFrom = banlistHtml.match('Effective from ([A-Za-z]{2,10}) ([0-9]{2})([A-Za-z]{2}), ([0-9]{4})');
     console.log("Checking the banlist...");
 
     if (effectiveFrom != null) {
-        effectiveDate = effectiveFrom[0].match('([A-Za-z]{2,10}) ([0-9]{2}), ([0-9]{4})');
-        var d1 = Date.parse(effectiveDate[0]);
-        var tweet = 'The YuGiOh banlist has been updated! Effective from ' + effectiveDate[0];
+        var dateFromArray = effectiveFrom[0];
+        var tweet = 'The YuGiOh banlist has been updated! ' + dateFromArray;
+        effectiveDateFromArray = dateFromArray.match('([A-Za-z]{2,10}) ([0-9]{2})([A-Za-z]{2}), ([0-9]{4})');
+        var effectiveDate = moment(effectiveDateFromArray, 'MMMM Do, YYYY');
 
-        if (d1 >= currentDate && !doesLastTweetEqualThisAttempt(tweet)) {
+        if (!doesLastTweetEqualThisAttempt(tweet) && effectiveDate.isSameOrAfter(currentDate)) {
             T.post('statuses/update', {status: tweet}, function (err, data, response) {
                 console.log(data)
             });
@@ -83,22 +89,22 @@ function konamiRequest() {
 
     request(optionsB, function (error, response, body) {
         if (!error && response.statusCode == 200) {
-            banlistHtml = response.body;
+            banlistHtml2 = response.body;
         }
     })
 
-    effectiveFrom = banlistHtml.match('Effective from ^([0-2][0-9]|(3)[0-1])(\/)(((0)[0-9])|((1)[0-2]))(\/)\d{4}$');
+    effectiveFrom = banlistHtml2.match('Effective from ([0-2][0-9]|(3)[0-1])(\/)(((0)[0-9])|((1)[0-2]))(\/)([2][0]([0-9][0-9]))');
     console.log("Checking the banlist...");
 
     if (effectiveFrom != null) {
-        effectiveDate = effectiveFrom[0].match('^([0-2][0-9]|(3)[0-1])(\/)(((0)[0-9])|((1)[0-2]))(\/)\d{4}$');
+        effectiveDate = effectiveFrom[0].match('([0-2][0-9]|(3)[0-1])(/)(((0)[0-9])|((1)[0-2]))(/)([2][0]([0-9][0-9]))');
         var splitDate = effectiveDate.split('/');
         var month = splitDate[1] - 1; //Javascript months are 0-11
+        var dateObj = new Date(splitDate[2], month, splitDate[0]);
+            var d2 = moment(dateObj);
+            var tweet = 'The YuGiOh banlist has been updated! Effective from ' + effectiveDate[0];
 
-        var d2 = new Date(splitDate[2], month, splitDate[0]);
-        var tweet = 'The YuGiOh banlist has been updated! Effective from ' + effectiveDate[0];
-
-        if (d2 >= currentDate && !doesLastTweetEqualThisAttempt(tweet)) {
+            if (d2.isSameOrAfter(currentDate) && !doesLastTweetEqualThisAttempt(tweet)) {
             T.post('statuses/update', {status: tweet}, function (err, data, response) {
                 console.log(data)
             });
@@ -107,4 +113,4 @@ function konamiRequest() {
     }
 }
 
-setInterval(konamiRequest, 120000); //runs every 2 minutes
+setInterval(konamiRequest, 10000);
