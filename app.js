@@ -1,6 +1,7 @@
 var Twitter = require('twitter');
 var request = require('request');
 var express = require('express');
+var moment = require('moment');
 
 const PORT = process.env.PORT;
 
@@ -12,7 +13,6 @@ var T = new Twitter({
     access_token_key: '..',
     access_token_secret: '..',
 });
-var lastDate = '';
 
 var headers = {
     'User-Agent': 'YgoBanlistBot/1.0.0',
@@ -26,7 +26,7 @@ var optionsA = {
 }
 
 var optionsB = {
-    url: 'http://www.yugioh-card.com/uk/limited',
+    url: 'https://www.yugioh-card.com/uk/gameplay/detail.php?id=1155',
     method: 'GET',
     headers: headers
 }
@@ -36,8 +36,8 @@ app.get('/', function (req, res) {
 })
 
 var server = app.listen(PORT, function () {
-    var host = server.address().address
-    var post = server.address().port
+    var host = server.address().address;
+    var post = server.address().port;
 
     console.log("Listening")
 })
@@ -98,7 +98,7 @@ function konamiRequest() {
 
     if (effectiveFrom != null) {
         effectiveDate = effectiveFrom[0].match('([0-2][0-9]|(3)[0-1])(/)(((0)[0-9])|((1)[0-2]))(/)([2][0]([0-9][0-9]))');
-        var splitDate = effectiveDate.split('/');
+        var splitDate = effectiveDate[0].split('/');
         var month = splitDate[1] - 1; //Javascript months are 0-11
         var dateObj = new Date(splitDate[2], month, splitDate[0]);
             var d2 = moment(dateObj);
@@ -106,7 +106,7 @@ function konamiRequest() {
 
             if (d2.isSameOrAfter(currentDate) && !doesLastTweetEqualThisAttempt(tweet)) {
             T.post('statuses/update', {status: tweet}, function (err, data, response) {
-                console.log(data)
+                console.log(data);
             });
             console.log("I should have tweeted that the banlist updated");
         }
