@@ -45,16 +45,16 @@ var server = app.listen(PORT, function () {
 var banlistHtml = '';
 var banlistHtml2 = '';
 
-function doesLastTweetEqualThisAttempt (tweetAttempt) {
+function doesLastTweetEqualThisAttempt(tweetAttempt) {
     T.get('statuses/user_timeline', {screen_name: 'ygobanlistbot', count: 1}, function (err, tweets, response) {
-      if(err){
-          console.log(err[0].message)
-      }
-      else {
-          console.log("I'm checking to see if the last tweet equals this attempt.");
-          return tweets[0].text === tweetAttempt;
-      }
-    })
+        if (err) {
+            console.log(err[0].message)
+        } else {
+            console.log("I'm checking to see if the last tweet equals this attempt. " + (tweets[0].text === tweetAttempt) + ". Last tweet: " + tweets[0].text
+            + " Attempt: " + tweetAttempt);
+            return tweets[0].text === tweetAttempt;
+        }
+    });
 }
 
 function konamiRequest() {
@@ -65,18 +65,19 @@ function konamiRequest() {
 
     request(optionsA, function (error, response, body) {
         if (!error && response.statusCode == 200) {
-            banlistHtml = response.body;
+            banlistHtml = body;
         }
     });
 
-    var effectiveFrom = banlistHtml.match('Effective from ([A-Za-z]{2,10}) ([0-9]{2})([A-Za-z]{2}), ([0-9]{4})');
-    console.log("Checking the banlist...");
+    var effectiveFrom = banlistHtml.match('Effective from ([A-Za-z]{2,10}) ([0-9]{1,2}), ([0-9]{4})');
+    console.log("Checking the US banlist: " + effectiveFrom);
 
     if (effectiveFrom != null) {
         var dateFromArray = effectiveFrom[0];
         var tweet = 'The YuGiOh banlist has been updated! ' + dateFromArray;
-        effectiveDateFromArray = dateFromArray.match('([A-Za-z]{2,10}) ([0-9]{2})([A-Za-z]{2}), ([0-9]{4})');
-        var effectiveDate = moment(effectiveDateFromArray, 'MMMM Do, YYYY');
+        effectiveDateFromArray = dateFromArray.match('([A-Za-z]{2,10}) ([0-9]{1,2}), ([0-9]{4})');
+        console.log(effectiveDateFromArray[0]);
+        var effectiveDate = moment(effectiveDateFromArray[0], 'MMMM Do, YYYY');
 
         if (!doesLastTweetEqualThisAttempt(tweet) && effectiveDate.isSameOrAfter(currentDate)) {
             T.post('statuses/update', {status: tweet}, function (err, data, response) {
@@ -94,17 +95,18 @@ function konamiRequest() {
     })
 
     effectiveFrom = banlistHtml2.match('Effective from ([0-2][0-9]|(3)[0-1])(\/)(((0)[0-9])|((1)[0-2]))(\/)([2][0]([0-9][0-9]))');
-    console.log("Checking the banlist...");
+    console.log("Checking the UK banlist: " + effectiveFrom);
 
     if (effectiveFrom != null) {
         effectiveDate = effectiveFrom[0].match('([0-2][0-9]|(3)[0-1])(/)(((0)[0-9])|((1)[0-2]))(/)([2][0]([0-9][0-9]))');
         var splitDate = effectiveDate[0].split('/');
+        console.log(splitDate);
         var month = splitDate[1] - 1; //Javascript months are 0-11
         var dateObj = new Date(splitDate[2], month, splitDate[0]);
-            var d2 = moment(dateObj);
-            var tweet = 'The YuGiOh banlist has been updated! Effective from ' + effectiveDate[0];
+        var d2 = moment(dateObj);
+        var tweet = 'The YuGiOh banlist has been updated! Effective from ' + effectiveDate[0];
 
-            if (d2.isSameOrAfter(currentDate) && !doesLastTweetEqualThisAttempt(tweet)) {
+        if (d2.isSameOrAfter(currentDate) && !doesLastTweetEqualThisAttempt(tweet)) {
             T.post('statuses/update', {status: tweet}, function (err, data, response) {
                 console.log(data);
             });
